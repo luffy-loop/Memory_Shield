@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from datetime import datetime
 
@@ -5,8 +6,12 @@ from .incident import Incident
 
 
 class IncidentService:
-    def __init__(self, db_path="memoryshield.db"):
-        self.db_path = db_path
+    def __init__(self, db_path=None):
+        self.db_path = db_path or (
+            "/tmp/memoryshield.db"
+            if os.getenv("VERCEL")
+            else "memoryshield.db"
+        )
         self._init_db()
 
     def _connect(self):
