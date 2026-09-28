@@ -11,13 +11,17 @@ class HindsightMemory:
 
         if base_url:
             try:
-                from hindsight import HindsightClient
+                from hindsight_client.hindsight_client import HindsightClient
                 self.client = HindsightClient(
                     base_url=base_url,
                     api_key=api_key
                 )
             except Exception as e:
                 print(f"Hindsight disabled: {e}")
+
+    @property
+    def enabled(self):
+        return self.client is not None
 
     def retain(self, content: str, bank_id=None):
         if not self.client:
@@ -50,5 +54,20 @@ class HindsightMemory:
         except Exception as e:
             print(f"Hindsight recall skipped: {e}")
             return []
+
+    def reflect(self, query: str, bank_id=None):
+        if not self.client:
+            return None
+
+        bank = bank_id or self.agent_bank_id
+
+        try:
+            return self.client.reflect(
+                bank_id=bank,
+                query=query
+            )
+        except Exception as e:
+            print(f"Hindsight reflect skipped: {e}")
+            return None
 
 memory = HindsightMemory()
