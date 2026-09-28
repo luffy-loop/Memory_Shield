@@ -8,6 +8,7 @@ from app.security.guard import MemoryGuard
 from app.memory.secure_store import SecureMemoryStore
 from app.incidents.api import router as incident_router
 from app.incidents.service import service
+from app.memory.hindsight import memory as hindsight_memory
 
 app = FastAPI(title="MemShield")
 
@@ -24,14 +25,51 @@ guard = MemoryGuard(memory)
 memory.guard = guard
 agent = Agent(memory, guard)
 
-app.include_router(incident_router)
-
 
 @app.get("/", response_class=HTMLResponse)
 def dashboard():
     return (BASE_DIR / "templates" / "dashboard.html").read_text(
         encoding="utf-8"
     )
+
+
+@app.post("/agent/chat")
+def agent_chat(message: str):
+    return agent.respond(message)
+
+
+@app.post("/chat")
+def chat(message: str):
+    return agent.respond(message)
+
+
+@app.post("/memory/check")
+def memory_check(content: str, source: str = "user"):
+    return guard.analyze(content, source)
+
+
+@app.post("/memory/guard")
+def memory_guard(content: str, source: str = "user"):
+    return guard.analyze(content, source)
+
+
+@app.post("/memory/retain")
+def memory_retain(content: str, source: str = "user"):
+    return memory.add(content, source)
+
+
+@app.get("/memory/recall")
+def memory_recall(query: str):
+    results = hindsight_memory.recall(query)
+
+    return {
+        "query": query,
+        "results": [
+            getattr(item, "text", "")
+            for item in results.results
+            if getattr(item, "text", "")
+        ]
+    }
 
 
 @app.post("/memory")
@@ -54,9 +92,27 @@ def get_review():
     return memory.get_review()
 
 
-@app.post("/chat")
-def chat(message: str):
-    return agent.respond(message)
+@app.get("/incidents/timeline")
+def incident_timeline():
+    incidents = service.all()
+
+    return [
+        {
+            "incident_id": incident.incident_id,
+            "title": incident.title,
+            "severity": incident.severity,
+            "source": incident.source,
+            "risk_score": incident.risk_score,
+            "status": incident.status,
+            "created_at": incident.created_at,
+            "resolved_at": incident.resolved_at
+        }
+        for incident in sorted(
+            incidents,
+            key=lambda x: x.created_at,
+            reverse=True
+        )
+    ]
 
 
 @app.get("/metrics")
@@ -78,3 +134,22 @@ def metrics():
             1 for i in incidents if i.status == "recovered"
         )
     }
+
+@app.get("/learning")
+def learning():
+    results = hindsight_memory.recall(
+        "previous memory poisoning attacks security incidents learned patterns",
+        bank_id=hindsight_memory.security_bank_id
+    )
+
+    return {
+        "patterns": [
+            {
+                "text": getattr(item, "text", ""),
+                "type": getattr(item, "type", "unknown")
+            }
+            for item in results
+            if getattr(item, "text", "")
+        ]
+    }
+app.include_router(incident_router)

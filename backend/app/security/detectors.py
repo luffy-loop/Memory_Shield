@@ -24,7 +24,11 @@ class InjectionDetector:
     ]
 
     def detect(self, text):
-        matches = [p for p in self.patterns if re.search(p, text, re.I)]
+        matches = [
+            p for p in self.patterns
+            if re.search(p, text, re.I)
+        ]
+
         return {
             "name": "prompt_injection",
             "score": min(60, len(matches) * 20),
@@ -34,16 +38,26 @@ class InjectionDetector:
 
 class PiiDetector:
     patterns = [
-        r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
-        r"\b\d{10}\b",
-        r"\b(?:\d[ -]*?){13,16}\b"
+        (r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", 10),
+        (r"\b\d{10}\b", 10),
+        (r"\b(?:\d[ -]*?){13,16}\b", 10),
+        (r"\b(?:date\s+of\s+birth|dob|birth\s*date)\b", 35),
+        (r"\b(?:password|passcode|pin|secret)\b", 35),
+        (r"\b(?:api\s*key|access\s*token|auth\s*token)\b", 35)
     ]
 
     def detect(self, text):
-        matches = [p for p in self.patterns if re.search(p, text)]
+        matches = []
+        score = 0
+
+        for pattern, value in self.patterns:
+            if re.search(pattern, text, re.I):
+                matches.append(pattern)
+                score += value
+
         return {
             "name": "sensitive_data",
-            "score": min(30, len(matches) * 10),
+            "score": min(50, score),
             "matches": matches
         }
 
@@ -62,7 +76,11 @@ class InstructionDetector:
     ]
 
     def detect(self, text):
-        matches = [p for p in self.patterns if re.search(p, text, re.I)]
+        matches = [
+            p for p in self.patterns
+            if re.search(p, text, re.I)
+        ]
+
         return {
             "name": "suspicious_instruction",
             "score": min(40, len(matches) * 15),
@@ -86,7 +104,9 @@ class TrustDetector:
             return {
                 "name": "source_trust",
                 "score": self.untrusted_sources[source],
-                "matches": [f"external or lower-trust source: {source}"]
+                "matches": [
+                    f"external or lower-trust source: {source}"
+                ]
             }
 
         return {
@@ -104,14 +124,18 @@ class ProvenanceDetector:
             return {
                 "name": "provenance",
                 "score": 5,
-                "matches": [f"provenance requires validation: {source}"]
+                "matches": [
+                    f"provenance requires validation: {source}"
+                ]
             }
 
         if source == "unknown":
             return {
                 "name": "provenance",
                 "score": 15,
-                "matches": ["source provenance is unknown"]
+                "matches": [
+                    "source provenance is unknown"
+                ]
             }
 
         return {
@@ -142,14 +166,18 @@ class ContradictionDetector:
                 return {
                     "name": "contradiction",
                     "score": 25,
-                    "matches": [f"conflicts with trusted memory: {item['content']}"]
+                    "matches": [
+                        f"conflicts with trusted memory: {item['content']}"
+                    ]
                 }
 
             if "never " in old and "always " in text_low:
                 return {
                     "name": "contradiction",
                     "score": 25,
-                    "matches": [f"conflicts with trusted memory: {item['content']}"]
+                    "matches": [
+                        f"conflicts with trusted memory: {item['content']}"
+                    ]
                 }
 
         return {

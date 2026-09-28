@@ -1,7 +1,9 @@
 from uuid import uuid4
+
 from app.memory.hindsight import memory as hindsight_memory
 from app.incidents.service import service
 from app.incidents.incident import Incident
+
 
 class SecureMemoryStore:
     def __init__(self, guard):
@@ -10,46 +12,8 @@ class SecureMemoryStore:
         self.quarantine = []
         self.review = []
 
-    def _learned_attack(self, content):
-        try:
-            results = hindsight_memory.recall(
-                f"previous memory poisoning attacks similar to: {content}"
-            )
-
-            for r in results.results:
-                text = getattr(r, "text", "").lower()
-
-                if "memory poisoning" in text and (
-                    "detected" in text or "quarantine" in text
-                ):
-                    return True
-
-        except Exception:
-            pass
-
-        return False
-
     def add(self, content, source="user"):
         result = self.guard.analyze(content, source)
-
-        attack_signals = {
-            "prompt_injection",
-            "suspicious_instruction"
-        }
-
-        has_attack_signal = any(
-            f["name"] in attack_signals
-            for f in result["findings"]
-        )
-
-        if result["score"] >= 20 and has_attack_signal:
-            if self._learned_attack(content):
-                result["findings"].append({
-                    "name": "learned_attack_pattern",
-                    "score": 30,
-                    "matches": ["similar attack pattern found in Hindsight"]
-                })
-                result["score"] = min(100, result["score"] + 30)
 
         if result["score"] >= 60:
             result["action"] = "quarantine"
@@ -70,7 +34,8 @@ class SecureMemoryStore:
             self.quarantine.append(item)
 
             findings = ", ".join(
-                x["name"] for x in result["findings"]
+                x["name"]
+                for x in result["findings"]
             )
 
             incident = Incident(
@@ -91,14 +56,16 @@ class SecureMemoryStore:
                 f"patterns={findings} | "
                 f"risk={result['score']} | "
                 f"action=quarantine | "
-                f"source={source}"
+                f"source={source}",
+                bank_id=hindsight_memory.security_bank_id
             )
 
         elif result["action"] == "review":
             self.review.append(item)
 
             findings = ", ".join(
-                x["name"] for x in result["findings"]
+                x["name"]
+                for x in result["findings"]
             )
 
             hindsight_memory.retain(
@@ -107,7 +74,8 @@ class SecureMemoryStore:
                 f"patterns={findings} | "
                 f"risk={result['score']} | "
                 f"action=review | "
-                f"source={source}"
+                f"source={source}",
+                bank_id=hindsight_memory.security_bank_id
             )
 
         else:
@@ -116,7 +84,8 @@ class SecureMemoryStore:
             hindsight_memory.retain(
                 f"AGENT_MEMORY | "
                 f"content={content} | "
-                f"source={source}"
+                f"source={source}",
+                bank_id=hindsight_memory.agent_bank_id
             )
 
         return item
