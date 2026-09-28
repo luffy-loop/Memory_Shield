@@ -29,9 +29,9 @@ class Agent:
     def respond(self, message, source="user"):
         security = self.guard.analyze(message, source)
 
-        if security["action"] == "quarantine":
-            item = self.memory.add(message, source)
+        item = self.memory.add(message, source)
 
+        if security["action"] == "quarantine":
             return {
                 "message": message,
                 "blocked": True,
@@ -41,7 +41,15 @@ class Agent:
                 "response": "Memory write blocked and quarantined."
             }
 
-        item = self.memory.add(message, source)
+        if security["action"] == "review":
+            return {
+                "message": message,
+                "blocked": False,
+                "security": security,
+                "memory": item,
+                "memory_context": "",
+                "response": "Memory write held for review."
+            }
 
         context = self.build_context(message)
 
