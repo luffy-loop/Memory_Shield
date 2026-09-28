@@ -66,9 +66,25 @@ def memory_recall(query: str):
         "query": query,
         "results": [
             getattr(item, "text", "")
-            for item in results.results
+            for item in results
             if getattr(item, "text", "")
         ]
+    }
+
+
+@app.post("/memory/reflect")
+def memory_reflect(query: str, bank_id: str = None):
+    result = hindsight_memory.reflect(query, bank_id=bank_id)
+
+    if result is None:
+        return {
+            "query": query,
+            "result": None
+        }
+
+    return {
+        "query": query,
+        "result": getattr(result, "text", result)
     }
 
 
