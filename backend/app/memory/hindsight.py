@@ -1,22 +1,23 @@
 import os
-from hindsight import HindsightClient
 
 class HindsightMemory:
     def __init__(self):
         self.agent_bank_id = "memshield-agent-v1"
         self.security_bank_id = "memshield-security-v1"
+        self.client = None
 
         base_url = os.getenv("HINDSIGHT_BASE_URL")
         api_key = os.getenv("HINDSIGHT_API_KEY")
 
-        self.client = (
-            HindsightClient(
-                base_url=base_url,
-                api_key=api_key
-            )
-            if base_url
-            else None
-        )
+        if base_url:
+            try:
+                from hindsight import HindsightClient
+                self.client = HindsightClient(
+                    base_url=base_url,
+                    api_key=api_key
+                )
+            except Exception as e:
+                print(f"Hindsight disabled: {e}")
 
     def retain(self, content: str, bank_id=None):
         if not self.client:
@@ -47,8 +48,6 @@ class HindsightMemory:
             )
             return getattr(result, "results", [])
         except Exception as e:
-            if "not found" in str(e).lower():
-                return []
             print(f"Hindsight recall skipped: {e}")
             return []
 
