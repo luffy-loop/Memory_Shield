@@ -230,6 +230,7 @@ POST /memory/guard
 POST /memory/retain
 GET  /memory
 GET  /memory/recall
+POST /memory/reflect
 ```
 
 ### Incidents
