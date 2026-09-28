@@ -1,148 +1,214 @@
 const $ = (id) => document.getElementById(id);
 
-const api = async (url, options = {}) => {
-    const response = await fetch(url, options);
-
-    if (!response.ok) {
-        throw new Error(await response.text());
-    }
-
-    return response.json();
-};
+let activeSection = "overview";
 
 function showSection(id) {
+    activeSection = id;
+
     document.querySelectorAll(".section").forEach(section => {
         section.classList.toggle("active", section.id === id);
     });
 
-    document.querySelectorAll(".nav-item").forEach(button => {
-        button.classList.toggle("active", button.dataset.section === id);
+    document.querySelectorAll(".nav-item").forEach(item => {
+        item.classList.toggle(
+            "active",
+            item.dataset.section === id
+        );
     });
 
+    const chatSend = $("chat-send");
+const chatInput = $("chat-input");
+
+if (chatSend) {
+    chatSend.addEventListener("click", sendChat);
+}
+
+if (chatInput) {
+    chatInput.addEventListener("keydown", event => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            sendChat();
+        }
+    });
+}
+
+    if (id === "learning") loadLearning();
     if (id === "incidents") loadIncidents();
     if (id === "memory") loadMemory();
 }
 
-document.querySelectorAll(".nav-item").forEach(button => {
-    button.addEventListener("click", () => {
-        showSection(button.dataset.section);
+document.querySelectorAll(".nav-item").forEach(item => {
+    item.addEventListener("click", () => {
+        showSection(item.dataset.section);
     });
 });
 
-async function loadLearning() {
-    try {
-        const res = await fetch("/learning");
-        const data = await res.json();
-
-        const box = document.getElementById("learning-list");
-        if (!box) return;
-
-        if (!data.patterns.length) {
-            box.innerHTML = "<p>No learned attack patterns yet.</p>";
-            return;
-        }
-
-        box.innerHTML = data.patterns.map(item => `
-            <div class="learning-item">
-                <div class="learning-type">${item.type}</div>
-                <div>${item.text}</div>
-            </div>
-        `).join("");
-    } catch (e) {
-        console.error(e);
-    }
-}
-
 async function loadMetrics() {
     try {
-        const data = await api("/metrics");
+        const response = await fetch("/metrics");
+        const data = await response.json();
 
-        $("trusted-count").textContent = data.trusted_memories;
-        $("review-count").textContent = data.review_items;
-        $("quarantine-count").textContent = data.quarantined_memories;
-        $("recovered-count").textContent = data.recovered_incidents;
+        if ($("trusted-count"))
+            $("trusted-count").textContent = data.trusted_memories;
+
+        if ($("review-count"))
+            $("review-count").textContent = data.review_items;
+
+        if ($("quarantine-count"))
+            $("quarantine-count").textContent = data.quarantined_memories;
+
+        if ($("incident-count"))
+            $("incident-count").textContent = data.incidents;
+
+        if ($("open-incidents"))
+            $("open-incidents").textContent = data.open_incidents;
+
+        if ($("recovered-count"))
+    $("recovered-count").textContent =
+        data.recovered_incidents;
     } catch (error) {
         console.error(error);
     }
 }
 
-async function loadIncidents() {
-    const container = $("incident-list");
+async function loadLearning() {
+    const list = $("learning-list");
+
+    if (!list) return;
 
     try {
-        const incidents = await api("/incidents/timeline");
+        const response = await fetch("/learning");
+        const data = await response.json();
 
-        if (!incidents.length) {
-            container.innerHTML =
-                '<div class="empty-state">No incidents detected.</div>';
+        if (!data.patterns || data.patterns.length === 0) {
+            list.innerHTML =
+                '<div class="empty-state">No learned security patterns yet.</div>';
             return;
         }
 
-        container.innerHTML = incidents.map(incident => `
-            <div class="incident">
-                <div>
-                    <span class="badge">
-                        ${escapeHtml(incident.status.toUpperCase())}
-                    </span>
-
-                    <h4>${escapeHtml(incident.title)}</h4>
-
-                    <p>
-                        Risk score:
-                        <strong>${incident.risk_score}</strong>
-                          Source:
-                        ${escapeHtml(incident.source)}
-                    </p>
-
-                    <p>
-                        ${escapeHtml(incident.incident_id)}
-                          ${formatDate(incident.created_at)}
-                    </p>
+        list.innerHTML = data.patterns.map(pattern => `
+            <div class="learning-item">
+                <div class="learning-type">
+                    ${escapeHtml(pattern.type || "learned")}
                 </div>
-
                 <div>
-                    <strong>
-                        ${escapeHtml(incident.severity.toUpperCase())}
-                    </strong>
-
-                    <div class="incident-actions">
-                        ${
-                            incident.status === "open"
-                                ? `<button onclick="quarantineIncident('${incident.incident_id}')">
-                                    QUARANTINE
-                                   </button>`
-                                : ""
-                        }
-
-                        ${
-                            incident.status === "quarantined"
-                                ? `<button onclick="recoverIncident('${incident.incident_id}')">
-                                    RECOVER
-                                   </button>`
-                                : ""
-                        }
-                    </div>
+                    ${escapeHtml(pattern.text)}
                 </div>
             </div>
         `).join("");
-
     } catch (error) {
-        container.innerHTML =
-            '<div class="empty-state">Unable to load incidents.</div>';
+        list.innerHTML =
+            '<div class="empty-state">Learning data unavailable.</div>';
+    }
+}
 
+async function loadIncidents() {
+    const list = $("incident-list");
+
+    if (!list) return;
+
+    try {
+        const response = await fetch("/incidents/timeline");
+        const incidents = await response.json();
+
+        if (!incidents.length) {
+            list.innerHTML =
+                '<div class="empty-state">No security incidents detected.</div>';
+            return;
+        }
+
+        list.innerHTML = incidents.map(incident => {
+            const status = String(incident.status || "open").toUpperCase();
+            const severity = String(incident.severity || "unknown").toUpperCase();
+
+            let action = "";
+
+            if (incident.status === "open") {
+                action = `
+                    <button class="incident-action"
+                        onclick="quarantineIncident('${incident.incident_id}')">
+                        QUARANTINE
+                    </button>
+                `;
+            } else if (incident.status === "quarantined") {
+                action = `
+                    <button class="incident-action"
+                        onclick="recoverIncident('${incident.incident_id}')">
+                        RECOVER
+                    </button>
+                `;
+            } else if (incident.status === "recovered") {
+                action = `
+                    <div class="incident-resolved">
+                        RECOVERED
+                    </div>
+                `;
+            }
+
+            return `
+                <article class="incident-card">
+                    <div class="incident-main">
+                        <div class="incident-status">
+                            ${escapeHtml(status)}
+                        </div>
+
+                        <h3>
+                            ${escapeHtml(incident.title)}
+                        </h3>
+
+                        <div class="incident-meta">
+                            Risk score:
+                            <strong>${incident.risk_score}</strong>
+                            Source:
+                            ${escapeHtml(incident.source)}
+                        </div>
+
+                        <div class="incident-meta">
+                            ${escapeHtml(incident.incident_id)}
+                            ${formatDate(incident.created_at)}
+                        </div>
+
+                        ${
+                            incident.resolution
+                                ? `
+                                <div class="incident-resolution">
+                                    ${escapeHtml(incident.resolution)}
+                                </div>
+                                `
+                                : ""
+                        }
+                    </div>
+
+                    <div class="incident-side">
+                        <div class="incident-severity">
+                            ${escapeHtml(severity)}
+                        </div>
+                        ${action}
+                    </div>
+                </article>
+            `;
+        }).join("");
+    } catch (error) {
+        list.innerHTML =
+            '<div class="empty-state">Unable to load incidents.</div>';
         console.error(error);
     }
 }
 
 async function quarantineIncident(id) {
     try {
-        await api(`/incidents/${id}/quarantine`, {
-            method: "POST"
-        });
+        const response = await fetch(
+            `/incidents/${encodeURIComponent(id)}/quarantine`,
+            {
+                method: "POST"
+            }
+        );
 
-        await loadIncidents();
-        await loadMetrics();
+        if (!response.ok) {
+            throw new Error("Quarantine failed");
+        }
 
+        await refresh();
     } catch (error) {
         console.error(error);
         alert("Unable to quarantine incident.");
@@ -150,19 +216,22 @@ async function quarantineIncident(id) {
 }
 
 async function recoverIncident(id) {
+    const resolution =
+        "Malicious memory removed from trusted context";
+
     try {
-        await api(
-            `/incidents/${id}/recover?resolution=${encodeURIComponent(
-                "Malicious memory removed from trusted context"
-            )}`,
+        const response = await fetch(
+            `/incidents/${encodeURIComponent(id)}/recover?resolution=${encodeURIComponent(resolution)}`,
             {
                 method: "POST"
             }
         );
 
-        await loadIncidents();
-        await loadMetrics();
+        if (!response.ok) {
+            throw new Error("Recovery failed");
+        }
 
+        await refresh();
     } catch (error) {
         console.error(error);
         alert("Unable to recover incident.");
@@ -170,142 +239,188 @@ async function recoverIncident(id) {
 }
 
 async function loadMemory() {
-    const container = $("memory-list");
+    const list = $("memory-list");
+
+    if (!list) return;
 
     try {
-        const memories = await api("/memory");
+        const response = await fetch("/memory");
+        const memories = await response.json();
 
         if (!memories.length) {
-            container.innerHTML =
-                '<div class="empty-state">No trusted memories.</div>';
+            list.innerHTML =
+                '<div class="empty-state">No trusted memories yet.</div>';
             return;
         }
 
-        container.innerHTML = memories.map(memory => `
+        list.innerHTML = memories.map(memory => `
             <div class="memory-item">
-                <h4>Trusted Memory</h4>
-                <p>${escapeHtml(memory.content)}</p>
-                <p>
-                    Source: ${escapeHtml(memory.source)}
-                      Risk: ${memory.risk_score}
-                </p>
+                <div class="memory-content">
+                    ${escapeHtml(memory.content)}
+                </div>
+
+                <div class="memory-meta">
+                    Source:
+                    ${escapeHtml(memory.source)}
+                    · Risk:
+                    ${memory.risk_score}
+                </div>
             </div>
         `).join("");
-
     } catch (error) {
-        container.innerHTML =
+        list.innerHTML =
             '<div class="empty-state">Unable to load memory.</div>';
-
         console.error(error);
     }
 }
 
 async function sendChat() {
     const input = $("chat-input");
-    const output = $("chat-output");
+
+    if (!input) return;
+
     const message = input.value.trim();
 
     if (!message) return;
 
-    output.innerHTML += `
-        <div class="chat-message user-message">
-            <strong>YOU</strong>
-            <p>${escapeHtml(message)}</p>
-        </div>
-    `;
+    const resultBox = $("chat-result");
 
-    input.value = "";
+    if (resultBox) {
+        resultBox.innerHTML =
+            '<div class="empty-state">Analyzing memory request...</div>';
+    }
 
     try {
-        const check = await api(
-            `/memory/check?content=${encodeURIComponent(message)}&source=user`,
+        const params = new URLSearchParams();
+        params.set("message", message);
+
+        const response = await fetch(
+            `/agent/chat?${params.toString()}`,
             {
                 method: "POST"
             }
         );
 
-        if (check.action !== "allow") {
-            const names = check.findings
-                .map(item => item.name)
-                .join(", ");
-
-            output.innerHTML += `
-                <div class="chat-message agent-message blocked-message">
-                    <strong>MEMORYSHIELD</strong>
-
-                    <p>
-                        MEMORY BLOCKED
-                    </p>
-
-                    <small>
-                        Risk: ${check.score}
-                          Action: ${escapeHtml(check.action.toUpperCase())}
-                          Detection: ${escapeHtml(names)}
-                    </small>
-
-                    <small>
-                        NOT STORED IN TRUSTED MEMORY
-                    </small>
-                </div>
-            `;
-
-            return;
+        if (!response.ok) {
+            throw new Error("Agent request failed");
         }
 
-        const data = await api(
-            `/agent/chat?message=${encodeURIComponent(message)}`,
-            {
-                method: "POST"
-            }
-        );
+        const data = await response.json();
 
-        output.innerHTML += `
-            <div class="chat-message agent-message">
-                <strong>MEMORYSHIELD</strong>
+        renderSecurityResult(data);
 
-                <p>${escapeHtml(data.message || "")}</p>
+        input.value = "";
 
-                <small>
-                    ${
-                        data.memory_context
-                            ? "Protected context loaded from memory."
-                            : "No trusted memory context recalled."
-                    }
-                </small>
-            </div>
-        `;
-
+        await refresh();
     } catch (error) {
-        output.innerHTML += `
-            <div class="chat-message agent-message blocked-message">
-                <strong>MEMORYSHIELD</strong>
-                <p>Security check failed.</p>
-                <small>Memory was not stored.</small>
-            </div>
-        `;
-
         console.error(error);
-    }
 
-    output.scrollTop = output.scrollHeight;
+        if (resultBox) {
+            resultBox.innerHTML =
+                '<div class="empty-state">Agent request failed.</div>';
+        }
+    }
 }
 
-$("chat-send").addEventListener("click", sendChat);
+function renderSecurityResult(data) {
+    const box = $("chat-result");
 
-$("chat-input").addEventListener("keydown", event => {
-    if (event.key === "Enter") {
-        sendChat();
-    }
-});
+    if (!box) return;
+
+    const security = data.security || {};
+    const findings = security.findings || [];
+
+    const actionRaw = String(
+    security.action || "unknown"
+).toLowerCase();
+
+const action = actionRaw.toUpperCase();
+const score = Number(security.score || 0);
+
+const blocked = actionRaw === "quarantine";
+const review = actionRaw === "review";
+
+const statusClass = blocked
+    ? "security-blocked"
+    : review
+        ? "security-review"
+        : "security-allowed";
+
+const decisionTitle = blocked
+    ? "MEMORY WRITE BLOCKED"
+    : review
+        ? "MEMORY REQUIRES REVIEW"
+        : "MEMORY ACCEPTED";
+
+    const findingsHtml = findings.length
+        ? findings.map(item => `
+            <div class="security-finding">
+                <span>${escapeHtml(item.name)}</span>
+                <strong>${item.score}</strong>
+            </div>
+        `).join("")
+        : `
+            <div class="security-finding">
+                <span>No suspicious signals detected</span>
+                <strong>0</strong>
+            </div>
+        `;
+
+    box.innerHTML = `
+        <div class="security-result ${statusClass}">
+            <div class="security-result-header">
+                <div>
+                    <div class="security-label">
+                        SECURITY DECISION
+                    </div>
+
+                    <h3>${decisionTitle}</h3>
+                </div>
+
+                <div class="security-score">
+                    <span>RISK</span>
+                    <strong>${score}</strong>
+                </div>
+            </div>
+
+            <div class="security-action">
+                <span>ACTION</span>
+                <strong>${escapeHtml(action)}</strong>
+            </div>
+
+            <div class="security-divider"></div>
+
+            <div class="security-label">
+                DETECTIONS
+            </div>
+
+            <div class="security-findings">
+                ${findingsHtml}
+            </div>
+
+            <div class="security-divider"></div>
+
+            <div class="security-message">
+                ${escapeHtml(data.response || "")}
+            </div>
+        </div>
+    `;
+}
 
 function formatDate(value) {
-    if (!value) return "Unknown time";
+    if (!value) return "";
 
-    return new Date(value).toLocaleString();
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return "";
+    }
+
+    return date.toLocaleString();
 }
 
 function escapeHtml(value) {
-    return String(value)
+    return String(value ?? "")
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;")
@@ -315,16 +430,17 @@ function escapeHtml(value) {
 
 async function refresh() {
     await loadMetrics();
-    await loadLearning();
 
-    const active = document.querySelector(".section.active");
-
-    if (active?.id === "incidents") {
+    if (activeSection === "incidents") {
         await loadIncidents();
     }
 
-    if (active?.id === "memory") {
+    if (activeSection === "memory") {
         await loadMemory();
+    }
+
+    if (activeSection === "learning") {
+        await loadLearning();
     }
 }
 
