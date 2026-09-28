@@ -15,13 +15,43 @@ def get_incidents():
 @router.get("/{incident_id}")
 def get_incident(incident_id: str):
     incident = service.get(incident_id)
+
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
+
+    return incident
+
+@router.post("/{incident_id}/quarantine")
+def quarantine_incident(incident_id: str):
+    incident = service.quarantine(incident_id)
+
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    return incident
+
+@router.post("/{incident_id}/recover")
+def recover_incident(incident_id: str, resolution: str):
+    incident = service.recover(incident_id, resolution)
+
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
     return incident
 
 @router.post("/{incident_id}/resolve")
-def resolve_incident(incident_id: str, root_cause: str, resolution: str):
-    incident = service.resolve(incident_id, root_cause, resolution)
+def resolve_incident(
+    incident_id: str,
+    root_cause: str,
+    resolution: str
+):
+    incident = service.resolve(
+        incident_id,
+        root_cause,
+        resolution
+    )
+
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
+
     return incident

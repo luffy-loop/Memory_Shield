@@ -6,17 +6,21 @@ class HindsightMemory:
         self.client = HindsightEmbedded(
             profile="memshield",
             llm_provider=os.getenv("HINDSIGHT_API_LLM_PROVIDER", "groq"),
-            llm_model=os.getenv("HINDSIGHT_API_LLM_MODEL", "llama-3.3-70b-versatile"),
+            llm_model=os.getenv("HINDSIGHT_API_LLM_MODEL", "openai/gpt-oss-20b"),
             llm_api_key=os.getenv("HINDSIGHT_API_LLM_API_KEY")
         )
         self.bank_id = "memshield-v2"
 
     def retain(self, content: str):
-        return self.client.retain(
-            bank_id=self.bank_id,
-            content=content,
-            context="AI agent memory security"
-        )
+        try:
+            return self.client.retain(
+                bank_id=self.bank_id,
+                content=content,
+                context="AI agent memory security"
+            )
+        except Exception as e:
+            print(f"Hindsight retain skipped: {e}")
+            return None
 
     def recall(self, query: str):
         try:
@@ -27,6 +31,7 @@ class HindsightMemory:
         except Exception as e:
             if "not found" in str(e).lower():
                 return []
-            raise
+            print(f"Hindsight recall skipped: {e}")
+            return []
 
 memory = HindsightMemory()

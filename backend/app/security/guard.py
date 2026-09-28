@@ -1,23 +1,35 @@
 from app.security.detectors import (
     InjectionDetector,
     PiiDetector,
-    InstructionDetector
+    InstructionDetector,
+    TrustDetector,
+    ProvenanceDetector,
+    ContradictionDetector
 )
 
-
 class MemoryGuard:
-    def __init__(self):
+    def __init__(self, memory_store=None):
+        self.memory_store = memory_store
         self.detectors = [
             InjectionDetector(),
             PiiDetector(),
-            InstructionDetector()
+            InstructionDetector(),
+            TrustDetector(),
+            ProvenanceDetector(),
+            ContradictionDetector(memory_store)
         ]
 
     def analyze(self, content, source="user"):
         findings = []
 
         for detector in self.detectors:
-            result = detector.detect(content)
+            if isinstance(
+                detector,
+                (TrustDetector, ProvenanceDetector, ContradictionDetector)
+            ):
+                result = detector.detect(content, source)
+            else:
+                result = detector.detect(content)
 
             if result["score"] > 0:
                 findings.append(result)

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MemoryShield</title>
+    <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body>
+    <div class="app">
+
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-mark">M</div>
+                <div>
+                    <h1>MemoryShield</h1>
+                    <span>AI MEMORY SECURITY</span>
+                </div>
+            </div>
+
+            <nav>
+                <button class="nav-item active" data-section="overview">
+                    <span>01</span> Overview
+                </button>
+                <button class="nav-item" data-section="agent">
+                    <span>02</span> Agent
+                </button>
+                <button class="nav-item" data-section="incidents">
+                    <span>03</span> Incidents
+                </button>
+                <button class="nav-item" data-section="memory">
+                    <span>04</span> Memory
+                </button>
+                <button class="nav-item" data-section="learning">
+                    <span>05</span> Learning
+                </button>
+            </nav>
+
+            <div class="shield-status">
+                <div class="pulse"></div>
+                <div>
+                    <strong>Protection Active</strong>
+                    <small>Write Guard online</small>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main">
+
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">SECURITY CONSOLE</p>
+                    <h2>Memory Defense Center</h2>
+                </div>
+
+                <div class="system-state">
+                    <span></span>
+                    SYSTEM PROTECTED
+                </div>
+            </header>
+
+            <section id="overview" class="section active">
+
+                <div class="hero">
+                    <div>
+                        <p class="eyebrow">REAL-TIME MEMORY SECURITY</p>
+                        <h3>Protect what your<br><em>AI remembers.</em></h3>
+                        <p class="hero-text">
+                            MemoryShield analyzes every memory candidate before
+                            it reaches persistent agent memory.
+                        </p>
+                    </div>
+
+                    <div class="shield-visual">
+                        <div class="ring ring-1"></div>
+                        <div class="ring ring-2"></div>
+                        <div class="shield">M</div>
+                    </div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <span>TRUSTED MEMORY</span>
+                        <strong id="trusted-count">0</strong>
+                    </div>
+
+                    <div class="metric-card">
+                        <span>UNDER REVIEW</span>
+                        <strong id="review-count">0</strong>
+                    </div>
+
+                    <div class="metric-card danger">
+                        <span>QUARANTINED</span>
+                        <strong id="quarantine-count">0</strong>
+                    </div>
+
+                    <div class="metric-card">
+                        <span>RECOVERED</span>
+                        <strong id="recovered-count">0</strong>
+                    </div>
+                </div>
+
+                <div class="panel-grid">
+                    <div class="panel">
+                        <div class="panel-head">
+                            <div>
+                                <span class="eyebrow">DEFENSE PIPELINE</span>
+                                <h4>Memory Security Lifecycle</h4>
+                            </div>
+                        </div>
+
+                        <div class="pipeline">
+                            <div class="stage">
+                                <b>01</b>
+                                <span>INPUT</span>
+                            </div>
+                            <div class="line"></div>
+                            <div class="stage">
+                                <b>02</b>
+                                <span>ANALYZE</span>
+                            </div>
+                            <div class="line"></div>
+                            <div class="stage">
+                                <b>03</b>
+                                <span>DECIDE</span>
+                            </div>
+                            <div class="line"></div>
+                            <div class="stage">
+                                <b>04</b>
+                                <span>RETAIN</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-head">
+                            <div>
+                                <span class="eyebrow">SECURITY STATE</span>
+                                <h4>Protection Status</h4>
+                            </div>
+                        </div>
+
+                        <div class="status-list">
+                            <div>
+                                <span>Write Guard</span>
+                                <b class="online">ONLINE</b>
+                            </div>
+                            <div>
+                                <span>Recall Guard</span>
+                                <b class="online">ONLINE</b>
+                            </div>
+                            <div>
+                                <span>Hindsight</span>
+                                <b class="online">CONNECTED</b>
+                            </div>
+                            <div>
+                                <span>Incident Engine</span>
+                                <b class="online">ONLINE</b>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+            <section id="agent" class="section">
+                <div class="section-title">
+                    <span class="eyebrow">AGENT CHAT</span>
+                    <h3>Test MemoryShield</h3>
+                </div>
+
+                <div class="chat-panel">
+                    <div id="chat-output" class="chat-output">
+                        <div class="chat-empty">
+                            Send a message to test the protected memory pipeline.
+                        </div>
+                    </div>
+
+                    <div class="chat-input">
+                        <input id="chat-input" placeholder="Enter a message or memory candidate...">
+                        <button id="chat-send">SEND</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="incidents" class="section">
+                <div class="section-title">
+                    <span class="eyebrow">INVESTIGATE</span>
+                    <h3>Security Incidents</h3>
+                </div>
+
+                <div id="incident-list" class="incident-list">
+                    <div class="empty-state">No incidents detected.</div>
+                </div>
+            </section>
+
+            <section id="memory" class="section">
+                <div class="section-title">
+                    <span class="eyebrow">PERSISTENT MEMORY</span>
+                    <h3>Memory Store</h3>
+                </div>
+
+                <div id="memory-list" class="memory-list">
+                    <div class="empty-state">No trusted memories.</div>
+                </div>
+            </section>
+
+            <section id="learning" class="section">
+                <div class="section-title">
+                    <span class="eyebrow">LEARN</span>
+                    <h3>Hindsight Learning</h3>
+                </div>
+
+                <div class="learning-card">
+                    <div class="learning-icon">?</div>
+                    <div>
+                        <h4>Historical attack intelligence</h4>
+                        <p>
+                            Previously detected memory poisoning patterns
+                            can influence future security decisions.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="learning-card">
+                    <div class="learning-icon">?</div>
+                    <div>
+                        <h4>Continuous defense</h4>
+                        <p>
+                            Detection, investigation, recovery and learning
+                            form a continuous security lifecycle.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="/static/dashboard.js"></script>
+</body>
+</html>

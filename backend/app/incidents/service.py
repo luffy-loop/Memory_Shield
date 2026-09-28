@@ -1,3 +1,4 @@
+from datetime import datetime
 from .incident import Incident
 
 class IncidentService:
@@ -11,14 +12,38 @@ class IncidentService:
     def get(self, incident_id: str):
         return self.incidents.get(incident_id)
 
+    def quarantine(self, incident_id: str):
+        incident = self.incidents.get(incident_id)
+
+        if not incident:
+            return None
+
+        incident.status = "quarantined"
+        return incident
+
+    def recover(self, incident_id: str, resolution: str):
+        incident = self.incidents.get(incident_id)
+
+        if not incident:
+            return None
+
+        incident.status = "recovered"
+        incident.resolution = resolution
+        incident.resolved_at = datetime.utcnow()
+
+        return incident
+
     def resolve(self, incident_id: str, root_cause: str, resolution: str):
         incident = self.incidents.get(incident_id)
+
         if not incident:
             return None
 
         incident.root_cause = root_cause
         incident.resolution = resolution
         incident.status = "resolved"
+        incident.resolved_at = datetime.utcnow()
+
         return incident
 
     def all(self):

@@ -68,3 +68,92 @@ class InstructionDetector:
             "score": min(40, len(matches) * 15),
             "matches": matches
         }
+
+
+class TrustDetector:
+    untrusted_sources = {
+        "web": 15,
+        "document": 10,
+        "file": 10,
+        "tool": 15,
+        "unknown": 20
+    }
+
+    def detect(self, text, source="user"):
+        source = source.lower()
+
+        if source in self.untrusted_sources:
+            return {
+                "name": "source_trust",
+                "score": self.untrusted_sources[source],
+                "matches": [f"external or lower-trust source: {source}"]
+            }
+
+        return {
+            "name": "source_trust",
+            "score": 0,
+            "matches": []
+        }
+
+
+class ProvenanceDetector:
+    def detect(self, text, source="user"):
+        source = source.lower()
+
+        if source in {"web", "document", "file", "tool"}:
+            return {
+                "name": "provenance",
+                "score": 5,
+                "matches": [f"provenance requires validation: {source}"]
+            }
+
+        if source == "unknown":
+            return {
+                "name": "provenance",
+                "score": 15,
+                "matches": ["source provenance is unknown"]
+            }
+
+        return {
+            "name": "provenance",
+            "score": 0,
+            "matches": []
+        }
+
+
+class ContradictionDetector:
+    def __init__(self, memory_store=None):
+        self.memory_store = memory_store
+
+    def detect(self, text, source="user"):
+        if not self.memory_store:
+            return {
+                "name": "contradiction",
+                "score": 0,
+                "matches": []
+            }
+
+        text_low = text.lower()
+
+        for item in self.memory_store.get_all():
+            old = item["content"].lower()
+
+            if "always " in old and "never " in text_low:
+                return {
+                    "name": "contradiction",
+                    "score": 25,
+                    "matches": [f"conflicts with trusted memory: {item['content']}"]
+                }
+
+            if "never " in old and "always " in text_low:
+                return {
+                    "name": "contradiction",
+                    "score": 25,
+                    "matches": [f"conflicts with trusted memory: {item['content']}"]
+                }
+
+        return {
+            "name": "contradiction",
+            "score": 0,
+            "matches": []
+        }

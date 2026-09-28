@@ -1,4 +1,7 @@
+from uuid import uuid4
 from app.memory.hindsight import memory as hindsight_memory
+from app.incidents.service import service
+from app.incidents.incident import Incident
 
 class SecureMemoryStore:
     def __init__(self, guard):
@@ -16,12 +19,8 @@ class SecureMemoryStore:
             for r in results.results:
                 text = getattr(r, "text", "").lower()
 
-                if (
-                    "memory poisoning" in text
-                    and (
-                        "detected" in text
-                        or "quarantine" in text
-                    )
+                if "memory poisoning" in text and (
+                    "detected" in text or "quarantine" in text
                 ):
                     return True
 
@@ -33,18 +32,33 @@ class SecureMemoryStore:
     def add(self, content, source="user"):
         result = self.guard.analyze(content, source)
 
-        if self._learned_attack(content):
-            result["findings"].append({
-                "name": "learned_attack_pattern",
-                "score": 30,
-                "matches": ["similar attack pattern found in Hindsight"]
-            })
-            result["score"] = min(100, result["score"] + 30)
+        attack_signals = {
+            "prompt_injection",
+            "suspicious_instruction"
+        }
 
-            if result["score"] >= 60:
-                result["action"] = "quarantine"
+        has_attack_signal = any(
+            f["name"] in attack_signals
+            for f in result["findings"]
+        )
 
-        memory = {
+        if result["score"] >= 20 and has_attack_signal:
+            if self._learned_attack(content):
+                result["findings"].append({
+                    "name": "learned_attack_pattern",
+                    "score": 30,
+                    "matches": ["similar attack pattern found in Hindsight"]
+                })
+                result["score"] = min(100, result["score"] + 30)
+
+        if result["score"] >= 60:
+            result["action"] = "quarantine"
+        elif result["score"] >= 30:
+            result["action"] = "review"
+        else:
+            result["action"] = "allow"
+
+        item = {
             "content": content,
             "source": source,
             "risk_score": result["score"],
@@ -53,48 +67,59 @@ class SecureMemoryStore:
         }
 
         if result["action"] == "quarantine":
-            self.quarantine.append(memory)
+            self.quarantine.append(item)
 
             findings = ", ".join(
-                item["name"] for item in result["findings"]
+                x["name"] for x in result["findings"]
             )
 
+            incident = Incident(
+                incident_id=f"INC-{uuid4().hex[:8].upper()}",
+                title="Memory Poisoning Detected",
+                description=content,
+                severity="high",
+                source=source,
+                memory_content=content,
+                risk_score=result["score"]
+            )
+
+            service.create(incident)
+
             hindsight_memory.retain(
-                f"MemoryShield security event: "
-                f"memory poisoning detected. "
-                f"Detection patterns: {findings}. "
-                f"Risk score: {result['score']}. "
-                f"Action: quarantine. "
-                f"Source: {source}."
+                f"SECURITY_EVENT | "
+                f"MemoryShield detected memory poisoning | "
+                f"patterns={findings} | "
+                f"risk={result['score']} | "
+                f"action=quarantine | "
+                f"source={source}"
             )
 
         elif result["action"] == "review":
-            self.review.append(memory)
+            self.review.append(item)
 
             findings = ", ".join(
-                item["name"] for item in result["findings"]
+                x["name"] for x in result["findings"]
             )
 
             hindsight_memory.retain(
-                f"MemoryShield security event: suspicious memory requires review. "
-                f"Detection patterns: {findings}. "
-                f"Risk score: {result['score']}. "
-                f"Action: review. "
-                f"Source: {source}."
+                f"SECURITY_EVENT | "
+                f"MemoryShield detected suspicious memory | "
+                f"patterns={findings} | "
+                f"risk={result['score']} | "
+                f"action=review | "
+                f"source={source}"
             )
 
         else:
-            self.memories.append(memory)
+            self.memories.append(item)
 
             hindsight_memory.retain(
-                f"Memory content: {content}\n"
-                f"Source: {source}\n"
-                f"Risk score: {result['score']}\n"
-                f"Security findings: {result['findings']}\n"
-                f"MemoryShield action: allowed"
+                f"AGENT_MEMORY | "
+                f"content={content} | "
+                f"source={source}"
             )
 
-        return memory
+        return item
 
     def get_all(self):
         return self.memories
