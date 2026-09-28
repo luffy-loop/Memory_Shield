@@ -4,7 +4,7 @@ version = "1.0.0"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi==0.141.1",
-    "hindsight-all==0.10.1"
+    "hindsight-client==0.10.1"
 ]
 
 [tool.vercel]
