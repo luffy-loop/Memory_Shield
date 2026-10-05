@@ -1,6 +1,7 @@
 from uuid import uuid4
 from datetime import datetime
 
+from app.security.data_loss import guard as data_loss_guard
 from .models import AgentDefinition, ApprovalRequest, AuditEvent, PolicyDecision, ToolRequest
 
 
@@ -68,7 +69,20 @@ class AgentSecurityEngine:
                 reason=f"Permission denied: {permission}"
             )
 
+        payload_text = " ".join(str(value) for value in request.payload.values())
+        payload_result = data_loss_guard.scan(payload_text)
+
+        if payload_result["action"] == "block":
+            return PolicyDecision(
+                decision="block",
+                risk_score=100,
+                reason="Data-loss guard blocked sensitive outbound payload"
+            )
+
         score = self._base_risk(request, agent)
+
+        if payload_result["action"] == "redact":
+            score = min(100, score + payload_result["score"])
 
         if score >= 80:
             return PolicyDecision(

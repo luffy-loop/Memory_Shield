@@ -5,6 +5,7 @@ from pathlib import Path
 
 from app.agent.agent import Agent
 from app.security.guard import MemoryGuard
+from app.security.data_loss import guard as data_loss_guard
 from app.memory.secure_store import SecureMemoryStore
 from app.incidents.api import router as incident_router
 from app.incidents.service import service
@@ -179,6 +180,18 @@ def learning():
             if getattr(item, "text", "")
         ]
     }
+
+
+@app.post("/security/output-check")
+def security_output_check(content: str):
+    result = data_loss_guard.scan(content)
+
+    if result["action"] == "redact":
+        result["redacted"] = data_loss_guard.redact(content)
+    else:
+        result["redacted"] = content if result["safe"] else ""
+
+    return result
 
 
 @app.get("/agents")

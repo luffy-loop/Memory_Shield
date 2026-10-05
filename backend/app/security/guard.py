@@ -3,6 +3,7 @@ import re
 from app.security.detectors import (
     InjectionDetector,
     PiiDetector,
+    CredentialDetector,
     InstructionDetector,
     TrustDetector,
     ProvenanceDetector,
@@ -18,6 +19,7 @@ class MemoryGuard:
         self.detectors = [
             InjectionDetector(),
             PiiDetector(),
+            CredentialDetector(),
             InstructionDetector(),
             TrustDetector(),
             ProvenanceDetector(),
@@ -90,7 +92,21 @@ class MemoryGuard:
 
                 score = min(100, score + 30)
 
-        if score >= 60:
+        credential_hit = any(
+            item["name"] == "credential_exposure"
+            for item in findings
+        )
+
+        critical_pii = any(
+            item["name"] == "sensitive_data"
+            and any(
+                match in {"aadhaar", "pan", "card", "password", "api_token"}
+                for match in item["matches"]
+            )
+            for item in findings
+        )
+
+        if credential_hit or score >= 60 or critical_pii:
             action = "quarantine"
         elif score >= 30:
             action = "review"

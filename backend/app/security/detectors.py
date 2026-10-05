@@ -38,26 +38,52 @@ class InjectionDetector:
 
 class PiiDetector:
     patterns = [
-        (r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", 10),
-        (r"\b\d{10}\b", 10),
-        (r"\b(?:\d[ -]*?){13,16}\b", 10),
-        (r"\b(?:date\s+of\s+birth|dob|birth\s*date)\b", 35),
-        (r"\b(?:password|passcode|pin|secret)\b", 35),
-        (r"\b(?:api\s*key|access\s*token|auth\s*token)\b", 35)
+        ("email", r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", 20),
+        ("phone", r"(?<!\d)(?:\+91[- ]?)?[6-9]\d{9}(?!\d)", 15),
+        ("aadhaar", r"(?<!\d)(?:\d{4}[ -]?){2}\d{4}(?!\d)", 45),
+        ("pan", r"\b[A-Z]{5}\d{4}[A-Z]\b", 35),
+        ("card", r"\b(?:\d[ -]*?){13,16}\b", 25),
+        ("date_of_birth", r"\b(?:date\s+of\s+birth|dob|birth\s*date)\b", 35),
+        ("password", r"\b(?:password|passcode|pin|secret)\b", 40),
+        ("api_token", r"\b(?:api\s*key|access\s*token|auth\s*token)\b", 45)
     ]
 
     def detect(self, text):
         matches = []
         score = 0
 
-        for pattern, value in self.patterns:
+        for name, pattern, value in self.patterns:
             if re.search(pattern, text, re.I):
-                matches.append(pattern)
+                matches.append(name)
                 score += value
 
         return {
             "name": "sensitive_data",
-            "score": min(50, score),
+            "score": min(100, score),
+            "matches": matches
+        }
+
+
+class CredentialDetector:
+    patterns = [
+        ("private_key", r"-----BEGIN\s+(?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
+        ("jwt", r"\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b"),
+        ("aws_key", r"\bAKIA[0-9A-Z]{16}\b"),
+        ("github_token", r"\bgh[pousr]_[A-Za-z0-9_]{20,}\b"),
+        ("generic_secret", r"\b(?:client_secret|client-secret|secret_key|secret-key)\s*[:=]\s*\S+"),
+        ("connection_string", r"\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?)://[^\s]+"),
+        ("credential_assignment", r"\b(?:password|passwd|token|api[_ -]?key)\s*[:=]\s*\S+")
+    ]
+
+    def detect(self, text):
+        matches = [
+            name for name, pattern in self.patterns
+            if re.search(pattern, text, re.I)
+        ]
+
+        return {
+            "name": "credential_exposure",
+            "score": min(100, len(matches) * 60),
             "matches": matches
         }
 

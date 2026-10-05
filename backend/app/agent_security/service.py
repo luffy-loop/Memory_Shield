@@ -1,3 +1,5 @@
+from app.incidents.incident import Incident
+from app.incidents.service import service as incident_service
 from .engine import AgentSecurityEngine
 from .registry import registry
 
@@ -21,6 +23,24 @@ def evaluate(request):
 
     if decision.requires_approval:
         approval = engine.request_approval(request, decision)
+
+    if decision.decision in {"block", "review"}:
+        incident = Incident(
+            incident_id=f"AGENT-{audit.event_id}",
+            title="Agent Security Policy Triggered",
+            description=decision.reason,
+            severity="critical" if decision.decision == "block" else "high",
+            source=request.agent_id,
+            memory_content=str(request.payload),
+            risk_score=decision.risk_score
+        )
+        incident_service.create(incident)
+
+        if (
+            decision.decision == "block"
+            and "Data-loss guard" in decision.reason
+        ):
+            registry.set_status(request.agent_id, "quarantined")
 
     return {
         "decision": decision.model_dump(),
