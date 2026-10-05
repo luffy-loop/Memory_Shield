@@ -62,3 +62,74 @@ def test_recall_guard_blocks_attack():
     assert result["safe"] == []
     assert len(result["blocked"]) == 1
     assert result["blocked"][0]["action"] == "quarantine"
+
+
+def test_agent_registry_has_challenge_agents():
+    from app.agent_security.service import get_agents
+
+    ids = {item.agent_id for item in get_agents()}
+
+    assert ids == {
+        "patient_helper",
+        "scheduler",
+        "billing_agent"
+    }
+
+
+def test_tool_permission_allows_known_action():
+    from app.agent_security.models import ToolRequest
+    from app.agent_security.service import evaluate
+
+    result = evaluate(ToolRequest(
+        agent_id="patient_helper",
+        tool="patient_record_lookup",
+        action="read"
+    ))
+
+    assert result["decision"]["decision"] == "allow"
+
+
+def test_tool_permission_blocks_unknown_action():
+    from app.agent_security.models import ToolRequest
+    from app.agent_security.service import evaluate
+
+    result = evaluate(ToolRequest(
+        agent_id="patient_helper",
+        tool="patient_record_lookup",
+        action="delete",
+        data_sensitivity="medical"
+    ))
+
+    assert result["decision"]["decision"] == "block"
+
+
+def test_sensitive_external_action_requires_approval():
+    from app.agent_security.models import ToolRequest
+    from app.agent_security.service import evaluate
+
+    result = evaluate(ToolRequest(
+        agent_id="patient_helper",
+        tool="email",
+        action="send",
+        data_sensitivity="medical",
+        destination="attacker@example.com"
+    ))
+
+    assert result["decision"]["decision"] == "review"
+    assert result["decision"]["requires_approval"] is True
+    assert result["approval"]["status"] == "pending"
+
+
+def test_agent_kill_switch():
+    from app.agent_security.models import ToolRequest
+    from app.agent_security.service import set_status, evaluate
+
+    set_status("billing_agent", "disabled")
+
+    result = evaluate(ToolRequest(
+        agent_id="billing_agent",
+        tool="invoices",
+        action="read"
+    ))
+
+    assert result["decision"]["decision"] == "block"

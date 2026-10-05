@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -9,8 +9,18 @@ from app.memory.secure_store import SecureMemoryStore
 from app.incidents.api import router as incident_router
 from app.incidents.service import service
 from app.memory.hindsight import memory as hindsight_memory
+from app.agent_security.models import ToolRequest
+from app.agent_security.service import (
+    get_agents,
+    get_agent,
+    evaluate,
+    approvals,
+    decide,
+    audit,
+    set_status
+)
 
-app = FastAPI(title="MemShield")
+app = FastAPI(title="MemoryShield Agent Security")
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -151,6 +161,7 @@ def metrics():
         )
     }
 
+
 @app.get("/learning")
 def learning():
     results = hindsight_memory.recall(
@@ -168,4 +179,63 @@ def learning():
             if getattr(item, "text", "")
         ]
     }
+
+
+@app.get("/agents")
+def agents():
+    return [item.model_dump() for item in get_agents()]
+
+
+@app.get("/agents/{agent_id}")
+def agent_security_details(agent_id: str):
+    item = get_agent(agent_id)
+
+    if not item:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    return item.model_dump()
+
+
+@app.post("/agents/evaluate")
+def evaluate_tool_request(request: ToolRequest):
+    return evaluate(request)
+
+
+@app.get("/agents/approvals")
+def agent_approvals():
+    return approvals()
+
+
+@app.post("/agents/approvals/{request_id}")
+def decide_agent_approval(
+    request_id: str,
+    approve: bool,
+    decided_by: str = "operator"
+):
+    result = decide(request_id, approve, decided_by)
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Approval request not found")
+
+    return result
+
+
+@app.get("/agents/audit")
+def agent_audit():
+    return audit()
+
+
+@app.post("/agents/{agent_id}/status")
+def update_agent_status(agent_id: str, status: str):
+    if status not in {"active", "paused", "quarantined", "disabled"}:
+        raise HTTPException(status_code=400, detail="Invalid agent status")
+
+    result = set_status(agent_id, status)
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    return result.model_dump()
+
+
 app.include_router(incident_router)
