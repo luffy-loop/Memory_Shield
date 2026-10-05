@@ -18,7 +18,9 @@ from app.agent_security.service import (
     approvals,
     decide,
     audit,
-    set_status
+    set_status,
+    summary as agent_summary,
+    agent_stats
 )
 
 app = FastAPI(title="MemoryShield Agent Security")
@@ -212,6 +214,11 @@ def agent_security_details(agent_id: str):
 @app.post("/agents/evaluate")
 def evaluate_tool_request(request: ToolRequest):
     return evaluate(request)
+
+
+@app.get("/agents/summary")
+def agent_security_summary():
+    return {"summary": agent_summary(), "agents": agent_stats(), "registry": [item.model_dump() for item in get_agents()]}
 
 
 @app.get("/agents/approvals")

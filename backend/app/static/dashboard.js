@@ -32,6 +32,7 @@ if (chatInput) {
     });
 }
 
+    if (id === "agent-security") loadAgentSecurity();
     if (id === "learning") loadLearning();
     if (id === "incidents") loadIncidents();
     if (id === "memory") loadMemory();
@@ -42,6 +43,8 @@ document.querySelectorAll(".nav-item").forEach(item => {
         showSection(item.dataset.section);
     });
 });
+
+async function loadAgentSecurity(){try{const r=await fetch("/agents/summary"),d=await r.json(),s=d.summary||{};if($("agent-actions"))$("agent-actions").textContent=s.total_actions||0;if($("agent-allowed"))$("agent-allowed").textContent=s.allowed||0;if($("agent-blocked"))$("agent-blocked").textContent=s.blocked||0;if($("agent-review"))$("agent-review").textContent=s.review||0;const l=$("agent-list");if(l)l.innerHTML=(d.registry||[]).map(a=>{const x=(d.agents||{})[a.agent_id]||{};return `<div class="agent-row"><div><strong>${escapeHtml(a.name)}</strong><small>${escapeHtml(a.description)}</small><div class="agent-tags">${a.tools.map(t=>`<span>${escapeHtml(t)}</span>`).join("")}</div></div><div class="agent-state"><b>${escapeHtml(a.status).toUpperCase()}</b><small>${x.actions||0} actions · max risk ${x.risk||0}</small></div></div>`}).join("")}catch(e){console.error(e)}try{const r=await fetch("/agents/audit"),e=await r.json(),l=$("agent-audit-list");if(l)l.innerHTML=e.slice(0,12).map(x=>`<div class="audit-row"><div><strong>${escapeHtml(x.agent_id)}</strong> ${escapeHtml(x.tool)}:${escapeHtml(x.action)}</div><div class="audit-decision">${escapeHtml(x.decision).toUpperCase()} · ${x.risk_score}</div><small>${escapeHtml(x.reason)}</small></div>`).join("")}catch(e){console.error(e)}}
 
 async function loadMetrics() {
     try {
@@ -438,6 +441,8 @@ async function refresh() {
     if (activeSection === "memory") {
         await loadMemory();
     }
+
+    if (activeSection === "agent-security") await loadAgentSecurity();
 
     if (activeSection === "learning") {
         await loadLearning();

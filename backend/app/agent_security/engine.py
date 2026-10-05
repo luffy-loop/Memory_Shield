@@ -62,6 +62,9 @@ class AgentSecurityEngine:
 
         permission = f"{request.tool}:{request.action}"
 
+        if request.tool not in agent.tools:
+            return PolicyDecision(decision="block", risk_score=95, reason=f"Tool denied: {request.tool}")
+
         if permission not in agent.permissions:
             return PolicyDecision(
                 decision="block",
@@ -116,7 +119,8 @@ class AgentSecurityEngine:
             risk_score=decision.risk_score,
             reason=decision.reason,
             data_sensitivity=request.data_sensitivity,
-            destination=request.destination
+            destination=request.destination,
+            payload_keys=list(request.payload.keys())
         )
         self.audit.append(event)
         return event
@@ -150,6 +154,19 @@ class AgentSecurityEngine:
 
     def audit_list(self):
         return list(reversed(self.audit))
+
+    def summary(self):
+        events = self.audit
+        return {"total_actions": len(events), "allowed": sum(e.decision == "allow" for e in events), "blocked": sum(e.decision == "block" for e in events), "review": sum(e.decision == "review" for e in events), "pending_approvals": sum(a.status == "pending" for a in self.approvals.values())}
+
+    def agent_stats(self):
+        stats = {}
+        for event in self.audit:
+            item = stats.setdefault(event.agent_id, {"actions": 0, "allowed": 0, "blocked": 0, "review": 0, "risk": 0})
+            item["actions"] += 1
+            item[event.decision] += 1
+            item["risk"] = max(item["risk"], event.risk_score)
+        return stats
 
     def set_agent_status(self, agent_id, status):
         return self.registry.set_status(agent_id, status)

@@ -802,3 +802,4 @@ nav {
         align-items: flex-start;
     }
 }
+.agent-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}.agent-panel{margin-bottom:12px}.agent-list,.audit-list{margin-top:18px}.agent-row{display:grid;grid-template-columns:1fr auto;gap:20px;padding:16px 0;border-bottom:1px solid var(--border)}.agent-row small{display:block;color:var(--muted);font-size:10px;margin-top:5px}.agent-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.agent-tags span{border:1px solid var(--border);padding:4px 7px;font-size:8px;color:var(--muted)}.agent-state{text-align:right}.agent-state small{color:var(--muted)}.audit-row{display:grid;grid-template-columns:1fr auto;gap:7px 20px;padding:13px 0;border-bottom:1px solid var(--border)}.audit-row small{grid-column:1/-1;color:var(--muted);font-size:10px}.audit-decision{font-size:9px;letter-spacing:1px;font-weight:800}@media(max-width:900px){.agent-metrics{grid-template-columns:repeat(2,1fr)}}

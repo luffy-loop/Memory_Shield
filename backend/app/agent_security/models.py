@@ -19,6 +19,8 @@ class ToolRequest(BaseModel):
     action: str
     data_sensitivity: str = "normal"
     destination: Optional[str] = None
+    source: str = "agent"
+    payload_keys: List[str] = Field(default_factory=list)
     payload: Dict[str, Any] = Field(default_factory=dict)
 
 

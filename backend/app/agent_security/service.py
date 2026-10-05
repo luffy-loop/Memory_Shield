@@ -68,3 +68,10 @@ def audit():
 
 def set_status(agent_id, status):
     return engine.set_agent_status(agent_id, status)
+
+
+def summary():
+    return engine.summary()
+
+def agent_stats():
+    return engine.agent_stats()
