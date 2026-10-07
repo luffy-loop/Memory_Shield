@@ -11,6 +11,7 @@ from app.incidents.api import router as incident_router
 from app.incidents.service import service
 from app.memory.hindsight import memory as hindsight_memory
 from app.agent_security.models import ToolRequest
+from app.carebridge.simulator import run_all as run_carebridge_lab
 from app.agent_security.service import (
     get_agents,
     get_agent,
@@ -194,6 +195,11 @@ def security_output_check(content: str):
         result["redacted"] = content if result["safe"] else ""
 
     return result
+
+
+@app.post("/carebridge/simulate")
+def carebridge_simulate():
+    return run_carebridge_lab()
 
 
 @app.get("/agents")
