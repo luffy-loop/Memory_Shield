@@ -41,6 +41,10 @@ class AgentRegistry:
             )
         }
 
+    def reset(self):
+        """Restore the baseline agent registry for isolated tests."""
+        self.__init__()
+
     def all(self):
         return [agent.model_copy(deep=True) for agent in self._agents.values()]
 
