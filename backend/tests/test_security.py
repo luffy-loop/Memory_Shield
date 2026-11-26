@@ -26,7 +26,7 @@ def test_prompt_injection():
 def test_sensitive_password():
     result = check(
         "My password is demo123.",
-        "review"
+        "quarantine"
     )
     assert result["safe"] is False
 
