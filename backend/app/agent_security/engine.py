@@ -164,7 +164,7 @@ class AgentSecurityEngine:
         for event in self.audit:
             item = stats.setdefault(event.agent_id, {"actions": 0, "allowed": 0, "blocked": 0, "review": 0, "risk": 0})
             item["actions"] += 1
-            item[event.decision] += 1
+            item[{"allow": "allowed", "block": "blocked", "review": "review"}[event.decision]] += 1
             item["risk"] = max(item["risk"], event.risk_score)
         return stats
 
