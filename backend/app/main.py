@@ -207,16 +207,6 @@ def agents():
     return [item.model_dump() for item in get_agents()]
 
 
-@app.get("/agents/{agent_id}")
-def agent_security_details(agent_id: str):
-    item = get_agent(agent_id)
-
-    if not item:
-        raise HTTPException(status_code=404, detail="Agent not found")
-
-    return item.model_dump()
-
-
 @app.post("/agents/evaluate")
 def evaluate_tool_request(request: ToolRequest):
     return evaluate(request)
@@ -249,6 +239,18 @@ def decide_agent_approval(
 @app.get("/agents/audit")
 def agent_audit():
     return audit()
+
+
+@app.get("/agents/{agent_id}")
+def agent_security_details(agent_id: str):
+    item = get_agent(agent_id)
+
+    if not item:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    return item.model_dump()
+
+
 
 
 @app.post("/agents/{agent_id}/status")
