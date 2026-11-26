@@ -137,7 +137,7 @@ def test_agent_kill_switch():
 
 def test_aadhaar_is_quarantined():
     result = check(
-        "aadhaar number 1234781123421",
+        "aadhaar number 1234 7811 2342",
         "quarantine"
     )
     assert result["score"] >= 45
