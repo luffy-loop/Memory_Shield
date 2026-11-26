@@ -248,6 +248,20 @@ GET /metrics
 GET /learning
 ```
 
+## Agent Security and CareBridge Lab
+
+MemoryShield also includes an agent-action policy engine with registered agents, tool/action permissions, risk scoring, human approval records, audit events, agent disabling, and outbound data-loss checks.
+
+The fictional CareBridge lab demonstrates three controlled scenarios: untrusted document instructions, a high-risk payment requiring review, and simulated credential lease rotation. It uses synthetic data and does not execute real payments or access patient systems.
+
+- [Technical evidence and expected outcomes](docs/carebridge-evidence.md)
+- [Threat model](backend/app/carebridge/threat_model.md)
+- [Security evaluation](docs/security-evaluation.md)
+
+## Security limitations
+
+This is an educational security prototype, not a production security boundary. Pattern-based detection can miss novel attacks or flag legitimate text. Risk scores are policy heuristics, not calibrated probabilities. Hindsight-dependent behavior requires a configured service; offline tests do not establish integration reliability. The agent policy engine and credential lab demonstrate decisions and simulated controls, not enforcement by external systems. Operator authentication, durable audit storage, secret redaction, and consistent enforcement across every API path require further review before production use.
+
 ## Tech Stack
 
 - Python
@@ -302,7 +316,8 @@ HINDSIGHT_API_KEY
 Run the security tests from the backend directory:
 
 ```bash
-python -m pytest tests/test_security.py -v
+python -m pip install pytest httpx
+python -m pytest tests -v
 ```
 
 The test suite covers benign memory acceptance, prompt-injection quarantine, sensitive-memory review, external-source handling, and Recall Guard filtering.
