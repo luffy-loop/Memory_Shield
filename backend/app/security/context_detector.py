@@ -24,11 +24,7 @@ class ContextDetector:
             r"\b(?:but|however|instead|except|although|yet)\b"
         )
 
-        self.action_pattern = (
-            r"\b(?:bypass|disable|skip|disclose|reveal|ignore|"
-            r"override|remove|expose|release|grant|retrieve|"
-            r"discard|suspend|replace|forget)\b"
-        )
+        self.action_pattern = r'\b(?:bypass|disable|skip|disclose|reveal|ignore|override|remove|expose|release|grant|retrieve|discard|suspend|replace|forget)\b|\b(?:follow|obey|execute|accept)\s+only\b|\balways\s+trust\b'
 
     def detect(self, content):
         text = self.normalizer.normalize(content)

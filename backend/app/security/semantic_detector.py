@@ -1,4 +1,3 @@
-
 import re
 
 from app.security.normalizer import TextNormalizer
@@ -12,6 +11,11 @@ class SemanticDetector:
         self.context_detector = ContextDetector()
 
         self.intent_rules = {
+            'instruction_override': (
+                r'\b(?:follow|obey|execute|accept)\s+only\b',
+                r'\b(?:commands?|instructions?|directives?|orders?)\b'
+            ),
+
             "policy_manipulation": (
                 r"\b(ignore|disable|remove|discard|replace|override|suspend|forget|bypass)\b",
                 r"\b(rules?|polic(?:y|ies)|restrictions?|checks?|limitations?|safety|security|instructions?)\b"
@@ -56,7 +60,7 @@ class SemanticDetector:
         score = original_score
 
         if context["defensive_context"]:
-            score = max(0, score - 15)
+            score = 0
 
         return {
             "name": "semantic_threat",

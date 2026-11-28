@@ -112,10 +112,6 @@ def test_response_structure(detector):
     assert isinstance(result["matches"], list)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Context-aware detection not implemented yet"
-)
 @pytest.mark.parametrize("content", [
     "Applications must not bypass security checks.",
     "Never disclose confidential records.",
@@ -133,7 +129,7 @@ def test_defensive_score_reduction(detector):
     )
 
     assert result["original_score"] == 30
-    assert result["score"] == 15
+    assert result["score"] == 0
     assert result["context"]["defensive_context"] is True
 
 

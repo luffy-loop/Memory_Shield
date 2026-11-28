@@ -1,3 +1,4 @@
+import re
 
 from app.security.detectors import (
     InjectionDetector,
@@ -31,6 +32,19 @@ class MemoryGuard:
             ContradictionDetector(memory_store)
         ]
 
+    def _remove_defensive_actions(self, content):
+        pattern = (
+            r"\b(?:(?:must|should|do|does|can)\s+not|never)"
+            r"\s+(?:bypass|disable|skip|disclose|reveal|ignore)\b"
+        )
+
+        return re.sub(
+            pattern,
+            " [defensive action] ",
+            content,
+            flags=re.IGNORECASE
+        )
+
     def _learned_attack(self, content):
         try:
             results = hindsight_memory.recall(
@@ -58,13 +72,29 @@ class MemoryGuard:
     def analyze(self, content, source="user"):
         findings = []
 
-        normalized_content = self.normalizer.normalize_for_detection(content)
+        normalized_content = (
+            self.normalizer.normalize_for_detection(content)
+        )
+
+        semantic_result = self.semantic_detector.detect(content)
+
+        original_attack_content = (
+            self._remove_defensive_actions(content)
+        )
+
+        normalized_attack_content = (
+            self._remove_defensive_actions(normalized_content)
+        )
+
         for detector in self.detectors:
 
             if isinstance(
                 detector,
-                (TrustDetector, ProvenanceDetector,
-                 ContradictionDetector)
+                (
+                    TrustDetector,
+                    ProvenanceDetector,
+                    ContradictionDetector
+                )
             ):
                 result = detector.detect(content, source)
 
@@ -72,20 +102,18 @@ class MemoryGuard:
                 detector,
                 (InjectionDetector, InstructionDetector)
             ):
-                original_result = detector.detect(content)
+                original_result = detector.detect(
+                    original_attack_content
+                )
 
-                result = original_result
+                normalized_result = detector.detect(
+                    normalized_attack_content
+                )
 
-                if normalized_content != content:
-                    normalized_result = detector.detect(
-                        normalized_content
-                    )
-
-                    if (
-                        normalized_result["score"]
-                        > original_result["score"]
-                    ):
-                        result = normalized_result
+                result = max(
+                    (original_result, normalized_result),
+                    key=lambda item: item["score"]
+                )
 
             else:
                 result = detector.detect(content)
@@ -114,8 +142,6 @@ class MemoryGuard:
             for item in findings
             if item["name"] not in attack_signals
         )
-
-        semantic_result = self.semantic_detector.detect(content)
 
         semantic_score = semantic_result["score"]
 
@@ -153,8 +179,11 @@ class MemoryGuard:
             item["name"] == "sensitive_data"
             and any(
                 match in {
-                    "aadhaar", "pan", "card",
-                    "password", "api_token"
+                    "aadhaar",
+                    "pan",
+                    "card",
+                    "password",
+                    "api_token"
                 }
                 for match in item["matches"]
             )
