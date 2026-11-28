@@ -1,4 +1,3 @@
-import re
 
 from app.security.detectors import (
     InjectionDetector,
@@ -9,12 +8,16 @@ from app.security.detectors import (
     ProvenanceDetector,
     ContradictionDetector
 )
+
+from app.security.normalizer import TextNormalizer
 from app.memory.hindsight import memory as hindsight_memory
 
 
 class MemoryGuard:
+
     def __init__(self, memory_store=None):
         self.memory_store = memory_store
+        self.normalizer = TextNormalizer()
 
         self.detectors = [
             InjectionDetector(),
@@ -53,12 +56,36 @@ class MemoryGuard:
     def analyze(self, content, source="user"):
         findings = []
 
+        normalized_content = self.normalizer.normalize(content)
+
         for detector in self.detectors:
+
             if isinstance(
                 detector,
-                (TrustDetector, ProvenanceDetector, ContradictionDetector)
+                (TrustDetector, ProvenanceDetector,
+                 ContradictionDetector)
             ):
                 result = detector.detect(content, source)
+
+            elif isinstance(
+                detector,
+                (InjectionDetector, InstructionDetector)
+            ):
+                original_result = detector.detect(content)
+
+                result = original_result
+
+                if normalized_content != content:
+                    normalized_result = detector.detect(
+                        normalized_content
+                    )
+
+                    if (
+                        normalized_result["score"]
+                        > original_result["score"]
+                    ):
+                        result = normalized_result
+
             else:
                 result = detector.detect(content)
 
@@ -100,7 +127,10 @@ class MemoryGuard:
         critical_pii = any(
             item["name"] == "sensitive_data"
             and any(
-                match in {"aadhaar", "pan", "card", "password", "api_token"}
+                match in {
+                    "aadhaar", "pan", "card",
+                    "password", "api_token"
+                }
                 for match in item["matches"]
             )
             for item in findings
@@ -108,8 +138,10 @@ class MemoryGuard:
 
         if credential_hit or score >= 60 or critical_pii:
             action = "quarantine"
+
         elif score >= 30:
             action = "review"
+
         else:
             action = "allow"
 
