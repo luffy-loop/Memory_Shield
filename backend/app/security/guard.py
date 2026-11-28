@@ -13,6 +13,7 @@ from app.security.detectors import (
 from app.security.normalizer import TextNormalizer
 from app.security.semantic_detector import SemanticDetector
 from app.security.intent_detector import IntentDetector
+from app.security.memory_poisoning_detector import MemoryPoisoningDetector
 from app.security.descriptive_context import DescriptiveContext
 from app.memory.hindsight import memory as hindsight_memory
 
@@ -24,6 +25,7 @@ class MemoryGuard:
         self.normalizer = TextNormalizer()
         self.semantic_detector = SemanticDetector()
         self.intent_detector = IntentDetector()
+        self.memory_poisoning_detector = MemoryPoisoningDetector()
 
         self.detectors = [
             InjectionDetector(),
@@ -74,6 +76,8 @@ class MemoryGuard:
 
     def analyze(self, content, source="user"):
         findings = []
+
+        poisoning_result = self.memory_poisoning_detector.detect(content)
 
         attack_content = DescriptiveContext.remove_descriptions(
             content
@@ -170,7 +174,11 @@ class MemoryGuard:
         if intent_result["score"] > 0:
             findings.append(intent_result)
 
+        if poisoning_result["score"] > 0:
+            findings.append(poisoning_result)
+
         combined_threat_score = max(
+            poisoning_result["score"],
             intent_result["score"],
             existing_threat_score,
             semantic_score
