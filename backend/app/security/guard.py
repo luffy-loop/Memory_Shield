@@ -10,6 +10,7 @@ from app.security.detectors import (
 )
 
 from app.security.normalizer import TextNormalizer
+from app.security.semantic_detector import SemanticDetector
 from app.memory.hindsight import memory as hindsight_memory
 
 
@@ -18,6 +19,7 @@ class MemoryGuard:
     def __init__(self, memory_store=None):
         self.memory_store = memory_store
         self.normalizer = TextNormalizer()
+        self.semantic_detector = SemanticDetector()
 
         self.detectors = [
             InjectionDetector(),
@@ -102,9 +104,33 @@ class MemoryGuard:
             for item in findings
         )
 
+        existing_threat_score = sum(
+            item["score"]
+            for item in findings
+            if item["name"] in attack_signals
+        )
+
+        other_risk_score = sum(
+            item["score"]
+            for item in findings
+            if item["name"] not in attack_signals
+        )
+
+        semantic_result = self.semantic_detector.detect(content)
+
+        semantic_score = semantic_result["score"]
+
+        if semantic_score > 0:
+            findings.append(semantic_result)
+
+        combined_threat_score = max(
+            existing_threat_score,
+            semantic_score
+        )
+
         score = min(
             100,
-            sum(item["score"] for item in findings)
+            combined_threat_score + other_risk_score
         )
 
         if score >= 20 and has_attack_signal:
