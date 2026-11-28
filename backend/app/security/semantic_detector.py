@@ -39,8 +39,7 @@ class SemanticDetector:
         }
 
     def detect(self, content):
-        text = self.normalizer.normalize(content)
-
+        text = self.normalizer.normalize_for_detection(content)
         context = self.context_detector.detect(content)
 
         matches = []

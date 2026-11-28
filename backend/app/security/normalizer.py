@@ -1,4 +1,3 @@
-
 import re
 import unicodedata
 
@@ -47,6 +46,37 @@ class TextNormalizer:
         text = self.normalize_separators(text)
         text = self.normalize_whitespace(text)
         text = self.collapse_spaced_letters(text)
+
+        return self.normalize_whitespace(text)
+
+    def normalize_for_detection(self, text: str) -> str:
+        text = self.normalize(text)
+
+        substitutions = str.maketrans({
+            "0": "o",
+            "1": "i",
+            "3": "e",
+            "4": "a",
+            "5": "s",
+            "7": "t",
+            "ο": "o",
+            "а": "a",
+            "е": "e",
+            "і": "i",
+            "с": "c",
+            "р": "p",
+            "х": "x"
+        })
+
+        def normalize_word(match):
+            word = match.group()
+
+            if any(char.isalpha() for char in word):
+                return word.translate(substitutions)
+
+            return word
+
+        text = re.sub(r"\w+", normalize_word, text)
 
         return self.normalize_whitespace(text)
 

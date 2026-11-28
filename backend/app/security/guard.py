@@ -58,8 +58,7 @@ class MemoryGuard:
     def analyze(self, content, source="user"):
         findings = []
 
-        normalized_content = self.normalizer.normalize(content)
-
+        normalized_content = self.normalizer.normalize_for_detection(content)
         for detector in self.detectors:
 
             if isinstance(
