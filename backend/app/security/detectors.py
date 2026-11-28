@@ -1,5 +1,6 @@
 import re
 
+
 class InjectionDetector:
     patterns = [
         r"ignore\s+(all\s+)?previous\s+instructions",
@@ -38,14 +39,54 @@ class InjectionDetector:
 
 class PiiDetector:
     patterns = [
-        ("email", r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b", 20),
-        ("phone", r"(?<!\d)(?:\+91[- ]?)?[6-9]\d{9}(?!\d)", 15),
-        ("aadhaar", r"(?<!\d)(?:\d{4}[ -]?){2}\d{4}(?!\d)", 45),
-        ("pan", r"\b[A-Z]{5}\d{4}[A-Z]\b", 35),
-        ("card", r"\b(?:\d[ -]*?){13,16}\b", 25),
-        ("date_of_birth", r"\b(?:date\s+of\s+birth|dob|birth\s*date)\b", 35),
-        ("password", r"\b(?:password|passcode|pin|secret)\b", 40),
-        ("api_token", r"\b(?:api\s*key|access\s*token|auth\s*token)\b", 45)
+        (
+            "email",
+            r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
+            30
+        ),
+        (
+            "phone",
+            r"(?<!\d)(?:\+91[- ]?)?[6-9]\d{9}(?!\d)",
+            15
+        ),
+        (
+            "aadhaar",
+            r"(?<!\d)(?:\d{4}[ -]?){2}\d{4}(?!\d)",
+            45
+        ),
+        (
+            "pan",
+            r"\b[A-Z]{5}\d{4}[A-Z]\b",
+            35
+        ),
+        (
+            "card",
+            r"\b(?:\d[ -]*?){13,16}\b",
+            25
+        ),
+        (
+            "date_of_birth",
+            r"\b(?:date\s+of\s+birth|dob|birth\s*date)\b",
+            35
+        ),
+        (
+            "password",
+            r"\b(?:password|passwd|passcode|secret)\s*"
+            r"(?:[:=]|\bis\b)\s*\S+",
+            40
+        ),
+        (
+            "password",
+            r"\bpin\s*(?:[:=]|\bis\b)\s*(?:\d{4,8}\b|[A-Za-z0-9_-]*[_0-9][A-Za-z0-9_-]*)",
+            40
+        ),
+        (
+            "api_token",
+            r"\b(?:api[\s_-]*key|access[\s_-]*token|"
+            r"auth[\s_-]*token|authentication[\s_-]*token)"
+            r"\s*(?:[:=]|\bis\b)\s*\S+",
+            45
+        )
     ]
 
     def detect(self, text):
@@ -54,8 +95,9 @@ class PiiDetector:
 
         for name, pattern, value in self.patterns:
             if re.search(pattern, text, re.I):
-                matches.append(name)
-                score += value
+                if name not in matches:
+                    matches.append(name)
+                    score += value
 
         return {
             "name": "sensitive_data",
@@ -66,13 +108,34 @@ class PiiDetector:
 
 class CredentialDetector:
     patterns = [
-        ("private_key", r"-----BEGIN\s+(?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
-        ("jwt", r"\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b"),
-        ("aws_key", r"\bAKIA[0-9A-Z]{16}\b"),
-        ("github_token", r"\bgh[pousr]_[A-Za-z0-9_]{20,}\b"),
-        ("generic_secret", r"\b(?:client_secret|client-secret|secret_key|secret-key)\s*[:=]\s*\S+"),
-        ("connection_string", r"\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?)://[^\s]+"),
-        ("credential_assignment", r"\b(?:password|passwd|token|api[_ -]?key)\s*[:=]\s*\S+")
+        (
+            "private_key",
+            r"-----BEGIN\s+(?:RSA |EC |OPENSSH )?PRIVATE KEY-----"
+        ),
+        (
+            "jwt",
+            r"\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b"
+        ),
+        (
+            "aws_key",
+            r"\bAKIA[0-9A-Z]{16}\b"
+        ),
+        (
+            "github_token",
+            r"\bgh[pousr]_[A-Za-z0-9_]{20,}\b"
+        ),
+        (
+            "generic_secret",
+            r"\b(?:client_secret|client-secret|secret_key|secret-key)\s*[:=]\s*\S+"
+        ),
+        (
+            "connection_string",
+            r"\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?)://[^\s]+"
+        ),
+        (
+            "credential_assignment",
+            r"\b(?:password|passwd|token|api[_ -]?key)\s*[:=]\s*\S+"
+        )
     ]
 
     def detect(self, text):
