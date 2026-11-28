@@ -12,6 +12,8 @@ from app.security.detectors import (
 
 from app.security.normalizer import TextNormalizer
 from app.security.semantic_detector import SemanticDetector
+from app.security.intent_detector import IntentDetector
+from app.security.descriptive_context import DescriptiveContext
 from app.memory.hindsight import memory as hindsight_memory
 
 
@@ -21,6 +23,7 @@ class MemoryGuard:
         self.memory_store = memory_store
         self.normalizer = TextNormalizer()
         self.semantic_detector = SemanticDetector()
+        self.intent_detector = IntentDetector()
 
         self.detectors = [
             InjectionDetector(),
@@ -72,18 +75,34 @@ class MemoryGuard:
     def analyze(self, content, source="user"):
         findings = []
 
-        normalized_content = (
-            self.normalizer.normalize_for_detection(content)
+        attack_content = DescriptiveContext.remove_descriptions(
+            content
         )
 
-        semantic_result = self.semantic_detector.detect(content)
+        normalized_content = (
+            self.normalizer.normalize_for_detection(
+                attack_content
+            )
+        )
+
+        semantic_result = self.semantic_detector.detect(
+            attack_content
+        )
+
+        intent_result = self.intent_detector.detect(
+            content
+        )
 
         original_attack_content = (
-            self._remove_defensive_actions(content)
+            self._remove_defensive_actions(
+                attack_content
+            )
         )
 
         normalized_attack_content = (
-            self._remove_defensive_actions(normalized_content)
+            self._remove_defensive_actions(
+                normalized_content
+            )
         )
 
         for detector in self.detectors:
@@ -148,7 +167,11 @@ class MemoryGuard:
         if semantic_score > 0:
             findings.append(semantic_result)
 
+        if intent_result["score"] > 0:
+            findings.append(intent_result)
+
         combined_threat_score = max(
+            intent_result["score"],
             existing_threat_score,
             semantic_score
         )
